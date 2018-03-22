@@ -1,10 +1,11 @@
 import { Component } from "@angular/core";
-import { Router } from "@angular/router";
 import { ActivatedRoute } from "@angular/router";
+import { Router } from "@angular/router";
 import { LoggerService } from "@core/logger.service";
 import { Dataservice } from "@dataservices/shared/dataservice.model";
 import { DataserviceService } from "@dataservices/shared/dataservice.service";
 import { DataservicesConstants } from "@dataservices/shared/dataservices-constants";
+import { QueryResults } from "@dataservices/shared/query-results.model";
 import { Table } from "@dataservices/shared/table.model";
 import { AbstractPageComponent } from "@shared/abstract-page.component";
 import { LoadingState } from "@shared/loading-state.enum";
@@ -75,4 +76,5 @@ export class TestDataserviceComponent extends AbstractPageComponent {
   public get quickLookSql(): string {
     return this.quickLookQueryText;
   }
+
 }
