@@ -15,12 +15,13 @@
  * limitations under the License.
  */
 
-import { Injectable, ReflectiveInjector } from "@angular/core";
+import { Injectable } from "@angular/core";
 import { Http } from "@angular/http";
 import { Connection } from "@connections/shared/connection.model";
 import { ConnectionService } from "@connections/shared/connection.service";
 import { JdbcTableFilter } from "@connections/shared/jdbc-table-filter.model";
 import { SchemaInfo } from "@connections/shared/schema-info.model";
+import { TemplateDefinition } from "@connections/shared/template-definition.model";
 import { AppSettingsService } from "@core/app-settings.service";
 import { LoggerService } from "@core/logger.service";
 import "rxjs/add/observable/of";
@@ -28,54 +29,61 @@ import "rxjs/add/observable/throw";
 import "rxjs/add/operator/catch";
 import "rxjs/add/operator/map";
 import { Observable } from "rxjs/Observable";
-import { ServiceCatalogSource } from "@connections/shared/service-catalog-source.model";
-import { NewConnection } from "@connections/shared/new-connection.model";
-import { TestDataService } from "@shared/test-data.service";
 
 @Injectable()
 export class MockConnectionService extends ConnectionService {
 
-  private connections: Connection[];
-  private serviceCatalogSources: ServiceCatalogSource[];
-  private connectionSourceSchemaInfoMap: Map<string, SchemaInfo[]>;
+  public static conn1Id = "conn1";
+  public static conn1 = MockConnectionService.createJdbcConnection( MockConnectionService.conn1Id );
+  public static conn1SchemaInfos = [
+    SchemaInfo.create( { name: "conn1SchemaInfo1", type: "Schema" } ),
+    SchemaInfo.create( { name: "conn1CatalogInfo", type: "Catalog", schemaNames: [ "conn1CatalogSchema1", "conn1CatalogSchema1" ] } )
+  ];
+  public static numConn1Schemas = 3;
+
+  public static conn2Id = "conn2";
+  public static conn2 = MockConnectionService.createJdbcConnection( MockConnectionService.conn2Id );
+  public static conn2SchemaInfos = [
+    SchemaInfo.create( { name: "conn2CatalogInfo", type: "Catalog", schemaNames: [ "conn2CatalogSchema1", "conn2CatalogSchema1" ] } ),
+    SchemaInfo.create( { name: "conn2SchemaInfo1", type: "Schema" } ),
+    SchemaInfo.create( { name: "conn2SchemaInfo2", type: "Schema" } )
+  ];
+  public static numConn2Schemas = 4;
+
+  public static conn3Id = "conn3";
+  public static conn3 = MockConnectionService.createJdbcConnection( MockConnectionService.conn3Id );
+  public static conn3SchemaInfos = [
+    SchemaInfo.create( { name: "conn3CatalogInfo", type: "Catalog", schemaNames: [ "conn3CatalogSchema1", "conn3CatalogSchema1" ] } ),
+    SchemaInfo.create( { name: "conn3SchemaInfo1", type: "Schema" } ),
+    SchemaInfo.create( { name: "conn3SchemaInfo2", type: "Schema" } ),
+    SchemaInfo.create( { name: "conn3SchemaInfo2", type: "Schema" } )
+  ];
+  public static numConn3Schemas = 5;
+
+  public static templ1 = new TemplateDefinition();
+  public static templ2 = new TemplateDefinition();
+  public static templ3 = new TemplateDefinition();
+
+  public conns: Connection[] = [
+    MockConnectionService.conn1,
+    MockConnectionService.conn2,
+    MockConnectionService.conn3 ];
+
+  public templs: TemplateDefinition[] = [
+    MockConnectionService.templ1,
+    MockConnectionService.templ2,
+    MockConnectionService.templ3 ];
+
+  private static createJdbcConnection( id: string ): Connection {
+    const newConn = new Connection();
+    newConn.setId( id );
+    newConn.setJdbc( true );
+    newConn.setServiceCatalogSourceName(id);
+    return newConn;
+  }
 
   constructor( http: Http, appSettings: AppSettingsService, logger: LoggerService ) {
     super(http, appSettings, logger);
-
-    // Inject service for test data
-    const injector = ReflectiveInjector.resolveAndCreate([TestDataService]);
-    const testDataService = injector.get(TestDataService);
-
-    // Get test data
-    this.connections = testDataService.getConnections();
-    this.serviceCatalogSources = testDataService.getServiceCatalogSources();
-    this.connectionSourceSchemaInfoMap = testDataService.getConnectionSourceSchemaInfoMap();
-  }
-
-  public isValidName( name: string ): Observable< string > {
-    if ( !name || name.length === 0 ) {
-      return Observable.of( "Connection name cannot be empty" );
-    }
-
-    // make sure no dataservice exists with that name
-    for ( const conn of this.connections ) {
-      if ( conn.getId() === name ) {
-        return Observable.of( "Connection with that name already exists" );
-      }
-    }
-
-    // just implement a case where no special characters allowed
-    for ( let i = 0; i < name.length; i++ ) {
-      const c = name.charAt( i );
-
-      // special characters have the same upper and lower case values
-      if ( c.toUpperCase() === c.toLowerCase() ) {
-        return Observable.of( "No special characters allowed" );
-      }
-    }
-
-    // valid
-    return Observable.of( "" );
   }
 
   /**
@@ -83,7 +91,7 @@ export class MockConnectionService extends ConnectionService {
    * @returns {Observable<Connection[]>}
    */
   public getAllConnections(): Observable<Connection[]> {
-    return Observable.of(this.connections);
+    return Observable.of(this.conns);
   }
 
   /**
@@ -92,61 +100,42 @@ export class MockConnectionService extends ConnectionService {
    * @returns {Observable<boolean>}
    */
   public deleteConnection(connectionId: string): Observable<boolean> {
-    const size = this.connections.length;
-    this.connections = this.connections.filter( ( conn ) => conn.getId() !== connectionId );
-    return Observable.of( size === this.connections.length );
+    const size = this.conns.length;
+    this.conns = this.conns.filter( ( conn ) => conn.getId() !== connectionId );
+    return Observable.of( size === this.conns.length );
   }
 
   /**
-   * Get the available ServiceCatalogSources from the komodo rest interface
-   * @returns {Observable<ServiceCatalogSource[]>}
+   * Get the connection templates from the komodo rest interface
+   * @returns {Observable<Array<TemplateDefinition<any>>>}
    */
-  public getAllServiceCatalogSources(): Observable<ServiceCatalogSource[]> {
-    return Observable.of(this.serviceCatalogSources);
+  public getConnectionTemplates(): Observable<TemplateDefinition[]> {
+    return Observable.of(this.templs);
   }
 
-  /**
-   * Get the connection schema info for a connection source
-   * @returns {Observable<SchemaInfo[]>}
-   */
-  public getConnectionSchemaInfos( connSource: string): Observable< SchemaInfo[] > {
-    const schemaInfos: SchemaInfo[] = this.connectionSourceSchemaInfoMap.get(connSource);
-    if( !schemaInfos || schemaInfos == null ) {
-      const empty: SchemaInfo[] = [];
-      return Observable.of( empty );
+  public getConnectionSchemaInfos( connectionId: string): Observable< SchemaInfo[] > {
+    if ( connectionId === MockConnectionService.conn1Id ) {
+      return Observable.of( MockConnectionService.conn1SchemaInfos );
     }
-    return Observable.of(schemaInfos);
+
+    if ( connectionId === MockConnectionService.conn2Id ) {
+      return Observable.of( MockConnectionService.conn2SchemaInfos );
+    }
+
+    if ( connectionId === MockConnectionService.conn3Id ) {
+      return Observable.of( MockConnectionService.conn3SchemaInfos );
+    }
+
+    const empty: SchemaInfo[] = [];
+    return Observable.of( empty );
   }
 
-  /**
-   * Get the tables for the specified input (connection and filters) for a Jdbc Connection
-   * @param {JdbcTableFilter} tableFilter
-   * @returns {Observable<string>}
-   */
   public getJdbcConnectionTables( tableFilter: JdbcTableFilter ): Observable< string[] > {
     const tableNames = [];
     tableNames.push( "table1" );
     tableNames.push( "table2" );
     tableNames.push( "table3" );
     return Observable.of( tableNames );
-  }
-
-  /**
-   * Create a connection in the Komodo repo - also binds the specified serviceCatalogSource
-   * @param {NewConnection} connection the connection object
-   * @returns {Observable<boolean>}
-   */
-  public createAndBindConnection(connection: NewConnection): Observable<boolean> {
-    return Observable.of(true);
-  }
-
-  /**
-   * Update a connection in the Komodo repo - also binds the specified serviceCatalogSource.
-   * @param {NewConnection} connection the connection object
-   * @returns {Observable<boolean>}
-   */
-  public updateAndBindConnection(connection: NewConnection): Observable<boolean> {
-    return Observable.of(true);
   }
 
 }

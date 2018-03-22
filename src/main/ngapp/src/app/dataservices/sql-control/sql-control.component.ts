@@ -200,32 +200,12 @@ export class SqlControlComponent implements OnInit {
   }
 
   /*
-   * Submits the query
-   */
-  private submitQuery(sqlQuery: string, dataserviceName: string, limit: number, offset: number): void {
-    this.queryResultsLoading = LoadingState.LOADING;
-    this.queryResults = null;
-    const self = this;
-    this.dataserviceService
-      .queryDataservice(sqlQuery, dataserviceName, limit, offset)
-      .subscribe(
-        (queryResult) => {
-          self.refreshData(queryResult);
-          self.queryResultsLoading = LoadingState.LOADED_VALID;
-        },
-        (error) => {
-          self.logger.error("[SqlControlComponent] Error getting query results: %o", error);
-          self.queryResultsLoading = LoadingState.LOADED_INVALID;
-        }
-      );
-  }
-
-  /*
    * Refresh the Query results
    * @param {QueryResults} results the results for a query
    */
-  private refreshData(results: QueryResults): void {
+  protected refreshData(results: QueryResults): void {
     this.queryResults = results;
+    console.error("results = " + results.getRows().length)
     if (!results) {
       return;
     }
@@ -284,6 +264,28 @@ export class SqlControlComponent implements OnInit {
                     sortable: true };
       this.columns.push( col );
     }
+  }
+
+  /*
+   * Submits the query
+   */
+  private submitQuery(sqlQuery: string, dataserviceName: string, limit: number, offset: number): void {
+    this.queryResultsLoading = LoadingState.LOADING;
+    this.queryResults = null;
+    const self = this;
+    this.dataserviceService
+      .queryDataservice(sqlQuery, dataserviceName, limit, offset)
+      .subscribe(
+        (queryResult) => {
+          alert("just got query");
+          self.refreshData(queryResult);
+          self.queryResultsLoading = LoadingState.LOADED_VALID;
+        },
+        (error) => {
+          self.logger.error("[SqlControlComponent] Error getting query results: %o", error);
+          self.queryResultsLoading = LoadingState.LOADED_INVALID;
+        }
+      );
   }
 
 }
