@@ -17,6 +17,7 @@
 
 import { Component, OnInit, ViewChild } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
+import { ConnectionStatus } from "@connections/shared/connection-status";
 import { Connection } from "@connections/shared/connection.model";
 import { ConnectionService } from "@connections/shared/connection.service";
 import { ConnectionsConstants } from "@connections/shared/connections-constants";
@@ -28,7 +29,6 @@ import { WizardService } from "@dataservices/shared/wizard.service";
 import { AbstractPageComponent } from "@shared/abstract-page.component";
 import { ConfirmDeleteComponent } from "@shared/confirm-delete/confirm-delete.component";
 import { LayoutType } from "@shared/layout-type.enum";
-import { ActionConfig, EmptyStateConfig, Filter } from "patternfly-ng";
 import { FilterConfig } from "patternfly-ng";
 import { FilterField } from "patternfly-ng";
 import { FilterEvent } from "patternfly-ng";
@@ -36,6 +36,7 @@ import { SortConfig } from "patternfly-ng";
 import { SortField } from "patternfly-ng";
 import { SortEvent } from "patternfly-ng";
 import { FilterType } from "patternfly-ng";
+import { ActionConfig, EmptyStateConfig, Filter } from "patternfly-ng";
 import { Subscription } from "rxjs/Subscription";
 
 @Component({
@@ -259,7 +260,8 @@ export class ConnectionsComponent extends AbstractPageComponent implements OnIni
    */
   public onActivate(connName: string): void {
     const selectedConnection =  this.filteredConnections.find((x) => x.getId() === connName);
-    selectedConnection.setSchemaState(DeploymentState.LOADING);
+
+    // TODO need to set query parameters for the refreshConnectionSchema call
 
     const self = this;
     // Start the connection deployment
@@ -404,12 +406,12 @@ export class ConnectionsComponent extends AbstractPageComponent implements OnIni
   /*
    * Update the displayed connection states using the provided states
    */
-  private onConnectionVdbStateChanged(stateMap: Map<string, DeploymentState>): void {
+  private onConnectionVdbStateChanged(stateMap: Map<string, ConnectionStatus>): void {
     // For displayed dataservices, update the State using supplied services
     for ( const conn of this.filteredConns ) {
       const connId = conn.getId();
       if (stateMap && stateMap.has(connId)) {
-        conn.setSchemaState(stateMap.get(connId));
+        conn.setStatus(stateMap.get(connId));
       }
     }
   }
