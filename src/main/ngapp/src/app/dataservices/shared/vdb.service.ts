@@ -283,6 +283,9 @@ export class VdbService extends ApiService {
       const tablePath = vdbPath + "/" + schemaVdbModelName + "/" + PathUtils.getSourceName(sourceNodePath);
       const modelSourcePath = vdbPath + "/" + schemaVdbModelName + "/vdb:sources/" + schemaVdbModelSourceName;
 
+      this.logger.debug( "VdbService.setVdbModelViews [tablePath]: " + tablePath );
+      this.logger.debug( "VdbService.setVdbModelViews [modelSourcePath]: " + modelSourcePath );
+
       tablePaths.push(tablePath);
       modelSourcePaths.push(modelSourcePath);
     }
