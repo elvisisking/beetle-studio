@@ -28,7 +28,7 @@ import { ViewEditorPart } from "@dataservices/virtualization/view-editor/view-ed
 import { Message } from "@dataservices/virtualization/view-editor/editor-views/message-log/message";
 import { ViewEditorEvent } from "@dataservices/virtualization/view-editor/event/view-editor-event";
 import { ViewEditorEventType } from "@dataservices/virtualization/view-editor/event/view-editor-event-type.enum";
-import { ViewEditorSaveProgressChangeId } from "@dataservices/virtualization/view-editor/event/view-editor-save-progress-change-id.enum";
+import { ViewEditorProgressChangeId } from "@dataservices/virtualization/view-editor/event/view-editor-save-progress-change-id.enum";
 import { VdbsConstants } from "@dataservices/shared/vdbs-constants";
 import { Command } from "@dataservices/virtualization/view-editor/command/command";
 import { UpdateViewDescriptionCommand } from "@dataservices/virtualization/view-editor/command/update-view-description-command";
@@ -38,6 +38,7 @@ import { RemoveSourcesCommand } from "@dataservices/virtualization/view-editor/c
 import { UndoManager } from "@dataservices/virtualization/view-editor/command/undo-redo/undo-manager";
 import { CommandFactory } from "@dataservices/virtualization/view-editor/command/command-factory";
 import { Undoable } from "@dataservices/virtualization/view-editor/command/undo-redo/undoable";
+import { ViewEditorI18n } from "@dataservices/virtualization/view-editor/view-editor-i18n";
 
 @Injectable()
 export class ViewEditorService {
@@ -58,6 +59,7 @@ export class ViewEditorService {
   private _messages: Message[] = [];
   private _previewResults: QueryResults;
   private _readOnly = false;
+  private _shouldFireEvents = true;
   private readonly _undoMgr: UndoManager;
   private readonly _vdbService: VdbService;
   private _warningMsgCount = 0;
@@ -155,11 +157,14 @@ export class ViewEditorService {
    */
   public fire( event: ViewEditorEvent ): void {
     this._logger.debug( "firing event: " + event );
-    this.editorEvent.emit( event );
 
-    // validate view when first set or when its state changes
-    if ( event.typeIsViewStateChanged() || event.typeIsEditedViewSet() ) {
-      this.validateView( event.type );
+    if (this._shouldFireEvents ) {
+      this.editorEvent.emit( event );
+
+      // validate view when first set or when its state changes
+      if ( event.typeIsViewStateChanged() || event.typeIsEditedViewSet() ) {
+        this.validateView( event.type );
+      }
     }
   }
 
@@ -191,6 +196,15 @@ export class ViewEditorService {
    */
   public getEditorConfig(): string {
     return this._editorConfig;
+  }
+
+  /**
+   * @returns {string} the ID used to persist the editor state
+   */
+  private getEditorStateId(): string {
+    const viewName = this._editorView.getName();
+    const serviceVdbName = this._editorVirtualization.getServiceVdbName();
+    return serviceVdbName + "." + viewName;
   }
 
   /**
@@ -323,6 +337,76 @@ export class ViewEditorService {
     }
   }
 
+  private restoreEditorState(): void {
+    if ( this.getEditorVirtualization() && this.getEditorView() ) {
+      // fire editor state in progress event
+      this.fire( ViewEditorEvent.create( ViewEditorPart.EDITOR,
+                                         ViewEditorEventType.RESTORE_EDITOR_STATE,
+                                         [ ViewEditorProgressChangeId.IN_PROGRESS ] ) );
+
+      const self = this;
+      const editorId = this.getEditorStateId();
+      let errorMsg: string;
+
+      this._vdbService.getViewEditorState( editorId ).subscribe(
+        ( editorState ) => {
+          const undoables = editorState[ UndoManager.undoables ];
+
+          if ( undoables && undoables.length !== 0 ) {
+            for ( const json of undoables ) {
+              const undoable = Undoable.create( json );
+
+              // update view
+              this.updateViewState( undoable.redoCommand );
+
+              // add command to undo/redo manager
+              this._undoMgr.add( undoable );
+            }
+          }
+        }, ( error ) => {
+          errorMsg = error.message ? error.message
+                                   : error.status ? `${error.status} - ${error.statusText}`
+                                                  : ViewEditorI18n.serverError;
+          self._logger.error( "Unable to restore editor state '" + editorId + "'. Error: " + error );
+        }, () => {
+          const args = errorMsg ? [ ViewEditorProgressChangeId.COMPLETED_FAILED, errorMsg ]
+                                : [ ViewEditorProgressChangeId.COMPLETED_SUCCESS ];
+
+          // fire restore completed
+          this.fire( ViewEditorEvent.create( ViewEditorPart.EDITOR,
+                                             ViewEditorEventType.RESTORE_EDITOR_STATE,
+                                             [ args ] ) );
+        }
+      );
+    }
+  }
+
+  /**
+   * Saves the current editor's undo stack. The current redo stack is not saved.
+   */
+  public saveEditorState(): void {
+    // fire save in progress event
+    this.fire( ViewEditorEvent.create( ViewEditorPart.EDITOR,
+               ViewEditorEventType.EDITOR_VIEW_SAVE_PROGRESS_CHANGED,
+               [ ViewEditorProgressChangeId.IN_PROGRESS ] ) );
+
+    const editorId = this.getEditorStateId();
+    const json = this._undoMgr.toJSON();
+
+    this._vdbService.saveViewEditorState( editorId, json ).subscribe( () => {
+        // fire save editor state succeeded event
+        this.fire( ViewEditorEvent.create( ViewEditorPart.EDITOR,
+                                           ViewEditorEventType.EDITOR_VIEW_SAVE_PROGRESS_CHANGED,
+                                           [ ViewEditorProgressChangeId.COMPLETED_SUCCESS ] ) );
+      }, () => {
+        // fire save editor state failed event
+        this.fire( ViewEditorEvent.create( ViewEditorPart.EDITOR,
+                                           ViewEditorEventType.EDITOR_VIEW_SAVE_PROGRESS_CHANGED,
+                                           [ ViewEditorProgressChangeId.COMPLETED_FAILED ] ) );
+      }
+    );
+  }
+
   /**
    * Sets the view being edited. This is called when the editor is first constructed and can only be called once.
    * Subsequent calls are ignored.
@@ -348,6 +432,7 @@ export class ViewEditorService {
     if ( !this._editorView ) {
       this._editorView = view;
       this.fire( ViewEditorEvent.create( source, ViewEditorEventType.EDITED_VIEW_SET, [ this._editorView ] ) );
+      this.restoreEditorState();
     } else {
       this._logger.debug( "setEditorView called more than once" );
     }
@@ -485,13 +570,13 @@ export class ViewEditorService {
   }
 
   /**
-   * Save the current View.
+   * Deploys the current View.
    * Currently, this regenerates *all* of the views.
    */
-  public saveView(connections: Connection[]): void {
+  public deployView(connections: Connection[]): void {
     // Fire save in progress event
     this.fire( ViewEditorEvent.create( ViewEditorPart.EDITOR, ViewEditorEventType.EDITOR_VIEW_SAVE_PROGRESS_CHANGED,
-                                                         [ ViewEditorSaveProgressChangeId.IN_PROGRESS ] ) );
+                                                         [ ViewEditorProgressChangeId.IN_PROGRESS ] ) );
 
     const serviceVdbName = this._editorVirtualization.getServiceVdbName();
     const serviceVdbModelName = this._editorVirtualization.getServiceViewModel();
@@ -521,14 +606,17 @@ export class ViewEditorService {
                                                connections)
       .subscribe(
         () => {
+          // clear undo/redo stack
+          this._undoMgr.clear()
+
           // Fire save completed success event
           this.fire( ViewEditorEvent.create( ViewEditorPart.EDITOR, ViewEditorEventType.EDITOR_VIEW_SAVE_PROGRESS_CHANGED,
-                                                               [ ViewEditorSaveProgressChangeId.COMPLETED_SUCCESS ] ) );
+                                                               [ ViewEditorProgressChangeId.COMPLETED_SUCCESS ] ) );
         },
         () => {
           // Fire save completed failed event
           this.fire( ViewEditorEvent.create( ViewEditorPart.EDITOR, ViewEditorEventType.EDITOR_VIEW_SAVE_PROGRESS_CHANGED,
-                                                               [ ViewEditorSaveProgressChangeId.COMPLETED_FAILED ] ) );
+                                                               [ ViewEditorProgressChangeId.COMPLETED_FAILED ] ) );
         }
       );
   }

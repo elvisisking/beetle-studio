@@ -149,37 +149,21 @@ export class CommandFactory {
    */
   public static decode( json: object = {} ): Command | Error {
     const cmdId = json[ Command.idPropJson ];
+    const args = json[ Command.argsPropJson ];
 
     switch ( cmdId ) {
       case AddSourcesCommand.id: {
-        let addSourcePaths: string = null;
-        let addIdent: string = null;
+        const addSourcePaths = args[ AddSourcesCommand.addedSourcePaths ];
+        const addIdent = args[ Command.identArg ];
 
-        for ( const entry of json[ Command.argsPropJson ] ) {
-          if ( entry[ Command.argNameJson ] === AddSourcesCommand.addedSourcePaths ) {
-            addSourcePaths = entry[ Command.argValueJson ];
-          } else if (entry[ Command.argNameJson ] === Command.identArg ) {
-            addIdent = entry[ Command.argValueJson ];
-          }
-        }
-
-        if (addSourcePaths)
-          return CommandFactory.createAddSourcesCommand(addSourcePaths, addIdent);
+        if ( addSourcePaths )
+          return CommandFactory.createAddSourcesCommand( addSourcePaths, addIdent );
 
         return new Error( "Unable to decode AddSourcesCommand: " + json );
       }
       case RemoveSourcesCommand.id: {
-        let removedSourcePaths: string = null;
-        let removedIdent: string = null;
-
-        for ( const entry of json[ Command.argsPropJson ] ) {
-          if ( entry[ Command.argNameJson ] === RemoveSourcesCommand.removedSourcePaths ) {
-            removedSourcePaths = entry[ Command.argValueJson ];
-          }
-          else if (entry[ Command.argNameJson ] === Command.identArg ) {
-            removedIdent = entry [ Command.argValueJson ];
-          }
-        }
+        const removedSourcePaths = args[ RemoveSourcesCommand.removedSourcePaths ];
+        const removedIdent = args[ Command.identArg ];
 
         if (removedSourcePaths && removedIdent) {
           return CommandFactory.createRemoveSourcesCommand(removedSourcePaths, removedIdent);
@@ -188,21 +172,8 @@ export class CommandFactory {
         return new Error( "Unable to decode RemoveSourcesCommand: " + json );
       }
       case UpdateViewDescriptionCommand.id: {
-        let newViewDescription: string = null;
-        let replacedViewDescription: string = null;
-
-        for ( const entry of json[ Command.argsPropJson ] ) {
-          if ( entry[ Command.argNameJson ] === UpdateViewDescriptionCommand.newDescription ) {
-            newViewDescription = entry[ Command.argValueJson ];
-          }
-          else if ( entry[ Command.argNameJson ] === UpdateViewDescriptionCommand.oldDescription ) {
-            replacedViewDescription = entry[ Command.argValueJson ];
-          }
-
-          if ( newViewDescription && replacedViewDescription ) {
-            break;
-          }
-        }
+        const newViewDescription = args[ UpdateViewDescriptionCommand.newDescription ];
+        const replacedViewDescription = args[ UpdateViewDescriptionCommand.oldDescription ];
 
         if ( newViewDescription && replacedViewDescription ) {
           return CommandFactory.createUpdateViewDescriptionCommand( newViewDescription, replacedViewDescription );
@@ -211,21 +182,8 @@ export class CommandFactory {
         return new Error( "Unable to decode UpdateViewDescriptionCommand: " + json );
       }
       case UpdateViewNameCommand.id: {
-        let newViewName: string = null;
-        let replacedViewName: string = null;
-
-        for ( const entry of json[ Command.argsPropJson ] ) {
-          if ( entry[ Command.argNameJson ] === UpdateViewNameCommand.newName ) {
-            newViewName = entry[ Command.argValueJson ];
-          }
-          else if ( entry[ Command.argNameJson ] === UpdateViewNameCommand.oldName ) {
-            replacedViewName = entry[ Command.argValueJson ];
-          }
-
-          if ( newViewName && replacedViewName ) {
-            break;
-          }
-        }
+        const newViewName = args[ UpdateViewNameCommand.newName ];
+        const replacedViewName = args[UpdateViewNameCommand.oldName];
 
         if ( newViewName && replacedViewName ) {
           return CommandFactory.createUpdateViewNameCommand( newViewName, replacedViewName );

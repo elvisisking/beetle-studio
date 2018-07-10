@@ -73,6 +73,7 @@ export class ViewEditorI18n {
   public static readonly redoActionTooltip = "Redo";
   public static readonly saveActionTitle = "Save";
   public static readonly saveActionTooltip = "Save";
+  public static readonly serverError = "Server Error";
   public static readonly showEditorCanvasAndViewsActionTooltip = "Show full editor";
   public static readonly showEditorCanvasOnlyActionTooltip = "Show canvas and properties only";
   public static readonly showEditorViewsOnlyActionTooltip = "Show information views only";

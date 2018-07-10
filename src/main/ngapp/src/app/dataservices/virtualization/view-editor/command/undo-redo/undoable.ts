@@ -21,8 +21,19 @@ export class Undoable {
   private readonly _redoCmd: Command;
   private readonly _undoCmd: Command;
 
-  public constructor( undoCmd: Command,
-                      redoCmd: Command ) {
+  public static create( json: object = {} ): Undoable {
+    const undoable = new Undoable();
+    Object.assign( undoable, undoable );
+    return undoable;
+  }
+
+  /**
+   * Constructs an undoable. !! ** The undo and redo commands should not be `null` *** !!
+   * @param {Command} undoCmd the undo command (should not be `null`)
+   * @param {Command} redoCmd the redo command (should not be `null`)
+   */
+  public constructor( undoCmd?: Command,
+                      redoCmd?: Command ) {
     this._undoCmd = undoCmd;
     this._redoCmd = redoCmd;
   }

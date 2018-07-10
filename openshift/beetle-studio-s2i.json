@@ -29,28 +29,28 @@
             "description": "The location url of the beetle-studio source repository",
             "displayName": "BeETLe-Studio Source URL",
             "name": "BEETLE_GIT_URL",
-            "value": "git://github.com/teiid/beetle-studio.git",
+            "value": "git://github.com/elvisisking/beetle-studio.git",
             "required": false
         },
         {
             "description": "The branch of the beetle-studio source repository",
             "displayName": "Beetle-studio Source Branch",
             "name": "BEETLE_GIT_BRANCH",
-            "value": "master",
+            "value": "save-restore-editor-state",
             "required": false
         },
         {
             "description": "The location url of the teiid-komodo engine source repository",
             "displayName": "Komodo Source URL",
             "name": "KOMODO_GIT_URL",
-            "value": "git://github.com/teiid/teiid-komodo.git",
+            "value": "git://github.com/elvisisking/teiid-komodo.git",
             "required": false
         },
         {
             "description": "The branch of the komodo source repository",
             "displayName": "Komodo Source Branch",
             "name": "KOMODO_GIT_BRANCH",
-            "value": "master",
+            "value": "471",
             "required": false
         },
         {
@@ -912,7 +912,8 @@
                                         "port":8080
                                     },
                                     "initialDelaySeconds":180,
-                                    "timeoutSeconds":30
+                                    "timeoutSeconds":30,
+                                    "failureThreshold": 10
                                 },
                                 "readinessProbe":{
                                     "httpGet":{
@@ -920,7 +921,8 @@
                                         "port":8080
                                     },
                                     "initialDelaySeconds":180,
-                                    "timeoutSeconds":30
+                                    "timeoutSeconds":30,
+                                    "failureThreshold": 10
                                 }
                             }
                         ]

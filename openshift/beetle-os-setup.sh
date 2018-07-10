@@ -61,6 +61,13 @@ while true; do
   esac
 done
 
+OS_HOST="192.168.99.100"
+MVN_MIRROR="http://10.0.1.7:8081/nexus/content/groups/maven-public/"
+#KOMODO_SOURCE_REPO="git://github.com/elvisisking/teiid-komodo.git"
+#KOMODO_GIT_BRANCH="471"
+#BEETLE_SOURCE_REPO="git://github.com/elvisisking/beetle-studio.git"
+#BEETLE_GIT_BRANCH="save-restore-editor-state"
+
 #
 # Check the parameters provided
 #

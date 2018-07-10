@@ -34,6 +34,7 @@ import { Connection } from "@connections/shared/connection.model";
 import { View } from "@dataservices/shared/view.model";
 import { QueryResults } from "@dataservices/shared/query-results.model";
 import { PathUtils } from "@dataservices/shared/path-utils";
+import { UndoManager } from "@dataservices/virtualization/view-editor/command/undo-redo/undo-manager";
 
 @Injectable()
 /**
@@ -463,6 +464,47 @@ export class VdbService extends ApiService {
                                    sourceNodePaths: string[], connections: Connection[]): Observable<boolean> {
     return this.undeployVdb(vdbName)
       .flatMap((res) => this.setVdbModelViews(vdbName, modelName, viewNames, sourceNodePaths, connections));
+  }
+
+  /**
+   * @param {string} editorId the ID of the editor state being requested
+   * @returns {Observable<{}>} the view editor state or empty object if not found
+   */
+  public getViewEditorState( editorId: string ): Observable< {} > {
+    return this.http.get(environment.viewEditorState + "/" + editorId, this.getAuthRequestOptions() )
+                    .map( ( response ) => {
+                      return Observable.of( response );
+                    } )
+                    .catch( ( error ) => {
+                      // no editor state found
+                      if ( error.status === 404 ) {
+                        return Observable.of( {} );
+                      }
+
+                      return this.handleError( error );
+                    } );
+  }
+
+  /**
+   * @param {string} editorId the ID of the view editor being saved
+   * @param {{}} editorState the JSON representation of the editor state
+   * @returns {Observable<boolean>} `true` if the editor state was successfully saved
+   */
+  public saveViewEditorState( editorId: string,
+                              editorState: {} ): Observable< boolean > {
+    const payload = {
+      "id": editorId,
+      [ UndoManager.undoables ]: editorState[ UndoManager.undoables ]
+    };
+
+    console.error( JSON.stringify( payload ) );
+    return this.http.put( environment.viewEditorState, payload, this.getAuthRequestOptions() )
+                    .map( ( response ) => {
+                      return response.ok;
+                    } )
+                    .catch( ( error ) =>
+                      this.handleError( error )
+                    );
   }
 
 }
